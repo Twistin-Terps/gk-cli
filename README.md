@@ -14,7 +14,6 @@ GitKraken CLI is available on macOS, Windows, and Unix systems.
 - [`git` Command Passthrough](#git-command-passthrough)
 - [Installation](#installation)
 - [Troubleshooting](#troubleshooting)
-- [Support](#support)
 
 ## MCP Server
 
@@ -139,10 +138,10 @@ Or create a new directory, move the binary and add it to $PATH:
 ```bash
 mkdir "$HOME/cli"
 mv ~/Downloads/gk "$HOME/cli"
-export PATH="$HOME/gk:$PATH"
+export PATH="$HOME/cli:$PATH"
 ```
 
-You can also [download][releases page] your corresponding package (`.deb`, `.rpm`) and install it with:
+You can also [download](https://github.com/gitkraken/gk-cli/releases) your corresponding package (`.deb`, `.rpm`) and install it with:
 
 ```bash
 sudo apt install ./gk.deb
@@ -158,7 +157,7 @@ sudo rpm -i ./gk.rpm
 
 ### Windows
 
-`gk` is available from [Winget][winget] with the following command:
+`gk` is available from [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/winget/) with the following command:
 
 ```bash
 winget install gitkraken.cli

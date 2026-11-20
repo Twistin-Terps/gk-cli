@@ -1,0 +1,63 @@
+name: bootstrap-pr-1
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: gk-cli-bootstrap-pr-1
+  cancel-in-progress: true
+jobs:
+  bootstrap-pr-1:
+    if: >-
+      github.event.pull_request.number == 1 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'codex/gk-trusted-pr-scan-20261119-160722'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the reviewed bootstrap candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: candidate
+      - name: Verify all three reviewed payloads before execution
+        working-directory: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            '1913e6068c7bbd859a8c57855767f4fcb3dc9d345cd27bef91c82f2f00035e4d  .github/workflows/basic-pr-checks.yml' \
+            '58be9d219a471e1cd54847e2b50b51fb9be04f57701fef605a619dd810ccd1a9  .github/scripts/scan-pr.mjs' \
+            'aaac430cf19a9aeab25e1b8a3c70fad2a974e5bcc99bbede5315bd9ae8c6f4d9  .github/scripts/scan-pr.test.mjs' \
+            | sha256sum --check --strict
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Fetch and verify free Gitleaks 8.30.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl --fail --location --silent --show-error \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            --output gitleaks.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz' | sha256sum --check --strict
+          tar -xzf gitleaks.tar.gz gitleaks
+      - name: Run real scanner regression fixtures on Linux and Node 22
+        env:
+          GK_GITLEAKS: ${{ runner.temp }}/gitleaks
+          GK_FIXTURE_ROOT: ${{ runner.temp }}
+        run: node --test candidate/.github/scripts/scan-pr.test.mjs
+      - name: Scan the exact bootstrap PR range
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          GK_GITLEAKS: ${{ runner.temp }}/gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node candidate/.github/scripts/scan-pr.mjs "$GITHUB_WORKSPACE/candidate" "$PR_BASE" "$PR_HEAD" "$GK_GITLEAKS"
